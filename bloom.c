@@ -7,6 +7,10 @@
 
 struct git_bloom {
 	uint64_t bitfield[1 << (29 - 6)];
+	uint32_t count[32];
+	uint64_t size[32];
+	uint32_t objects[32];
+	uint64_t total[32];
 };
 
 static inline void git_bloom_set(struct git_bloom *bloom, uint32_t bit)
@@ -39,30 +43,36 @@ static inline int git_bloom_test_sha1(const struct git_bloom *bloom, const char 
 	    && git_bloom_test(bloom, h[4]);
 }
 
-uint32_t git_uniq2(struct git_bloom *bloom, const char *sha1, const uint32_t *size, uint32_t n)
+void git_uniq2(struct git_bloom *bloom, const char *sha1, const uint32_t *size, uint32_t n)
 {
-	uint32_t count = 0;
 	while (--n) {
-		if (!git_bloom_test_sha1(bloom, sha1))
-			git_bloom_set_sha1(bloom, sha1),
-			count += *size;
+		const int il2 = *size ? 31 - __builtin_clz(*size) : 0;
+		if (!git_bloom_test_sha1(bloom, sha1)) {
+			git_bloom_set_sha1(bloom, sha1);
+			bloom->count[il2]++;
+			bloom->size[il2] += *size;
+		}
+		bloom->objects[il2]++;
+		bloom->total[il2] += *size;
 		sha1 += 20;
 		size++;
 	}
-	return count;
 }
 
-uint32_t git_uniq1(struct git_bloom *bloom, const char *sha1, const uint32_t *size, uint32_t n)
+void git_uniq1(struct git_bloom *bloom, const char *sha1, const uint32_t *size, uint32_t n)
 {
-	uint32_t count = 0;
 	while (--n) {
-		if (!git_bloom_test_sha1(bloom, sha1))
-			git_bloom_set_sha1(bloom, sha1),
-			count += *size;
+		const int il2 = *size ? 31 - __builtin_clz(*size) : 0;
+		if (!git_bloom_test_sha1(bloom, sha1)) {
+			git_bloom_set_sha1(bloom, sha1);
+			bloom->count[il2]++;
+			bloom->size[il2] += *size;
+		}
+		bloom->objects[il2]++;
+		bloom->total[il2] += *size;
 		sha1 += 24;
 		size++;
 	}
-	return count;
 }
 
 const char *open_idx2(FILE *f, uint32_t *objects) {
@@ -99,8 +109,6 @@ int cmp32(const void *a, const void *b) {
 
 int main(int argc, char **argv) {
 	struct git_bloom *bloom = calloc(sizeof(struct git_bloom), 1);
-	uint64_t count = 0;
-	uint64_t total = 0;
 	int i;
 	char buf[4096];
 
@@ -128,8 +136,7 @@ int main(int argc, char **argv) {
 					size[i] = v[1] - k;
 				else size[i] = 0;
 			}
-			total += sorted[objects] - sorted[0];
-			count += git_uniq2(bloom, map + 258 * 4, size, objects);
+			git_uniq2(bloom, map + 258 * 4, size, objects);
 			free(size);
 			free(sorted);
 			munmap((void*)map, objects * 28 + 258 * 4);
@@ -151,8 +158,7 @@ int main(int argc, char **argv) {
 						size[i] = v[1] - k;
 					else size[i] = 0;
 				}
-				total += sorted[objects] - sorted[0];
-				count += git_uniq1(bloom, map + 257 * 4, size, objects);
+				git_uniq1(bloom, map + 257 * 4, size, objects);
 				free(size);
 				free(sorted);
 				munmap((void*)map, objects * 24 + 256 * 4);
@@ -162,8 +168,10 @@ int main(int argc, char **argv) {
 		}
 		fclose(f);
 
-		printf("Unique: %lld\n", count);
-		printf("Total: %lld\n", total);
+		for (i = 0; i < 32; i++) {
+			printf("Unique[%d]: %lld (%d)\n", i, bloom->size[i], bloom->count[i]);
+			printf("Total[%d]: %lld (%d)\n", i, bloom->total[i], bloom->objects[i]);
+		}
 	}
 
 	return 0;
