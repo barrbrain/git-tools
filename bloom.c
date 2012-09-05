@@ -25,22 +25,45 @@ static inline int git_bloom_test(const struct git_bloom *bloom, uint32_t bit)
 
 static inline void git_bloom_set_sha1(struct git_bloom *bloom, const char *sha1)
 {
-	const uint32_t *h = (const uint32_t*) sha1;
-	git_bloom_set(bloom, h[0]);
-	git_bloom_set(bloom, h[1]);
-	git_bloom_set(bloom, h[2]);
-	git_bloom_set(bloom, h[3]);
-	git_bloom_set(bloom, h[4]);
+	git_bloom_set(bloom, *(uint32_t*)&sha1[0]);
+	git_bloom_set(bloom, *(uint32_t*)&sha1[1]);
+	git_bloom_set(bloom, *(uint32_t*)&sha1[2]);
+	git_bloom_set(bloom, *(uint32_t*)&sha1[3]);
+	git_bloom_set(bloom, *(uint32_t*)&sha1[4]);
+	git_bloom_set(bloom, *(uint32_t*)&sha1[5]);
+	git_bloom_set(bloom, *(uint32_t*)&sha1[6]);
+	git_bloom_set(bloom, *(uint32_t*)&sha1[7]);
+	git_bloom_set(bloom, *(uint32_t*)&sha1[8]);
+	git_bloom_set(bloom, *(uint32_t*)&sha1[9]);
+	git_bloom_set(bloom, *(uint32_t*)&sha1[10]);
+	git_bloom_set(bloom, *(uint32_t*)&sha1[11]);
+	git_bloom_set(bloom, *(uint32_t*)&sha1[12]);
+	git_bloom_set(bloom, *(uint32_t*)&sha1[13]);
+	git_bloom_set(bloom, *(uint32_t*)&sha1[14]);
+	git_bloom_set(bloom, *(uint32_t*)&sha1[15]);
+	git_bloom_set(bloom, *(uint32_t*)&sha1[16]);
 }
 
 static inline int git_bloom_test_sha1(const struct git_bloom *bloom, const char *sha1)
 {
-	const uint32_t *h = (const uint32_t*) sha1;
-	return git_bloom_test(bloom, h[0])
-	    && git_bloom_test(bloom, h[1])
-	    && git_bloom_test(bloom, h[2])
-	    && git_bloom_test(bloom, h[3])
-	    && git_bloom_test(bloom, h[4]);
+	return
+	git_bloom_test(bloom, *(uint32_t*)&sha1[0]) &&
+	git_bloom_test(bloom, *(uint32_t*)&sha1[1]) &&
+	git_bloom_test(bloom, *(uint32_t*)&sha1[2]) &&
+	git_bloom_test(bloom, *(uint32_t*)&sha1[3]) &&
+	git_bloom_test(bloom, *(uint32_t*)&sha1[4]) &&
+	git_bloom_test(bloom, *(uint32_t*)&sha1[5]) &&
+	git_bloom_test(bloom, *(uint32_t*)&sha1[6]) &&
+	git_bloom_test(bloom, *(uint32_t*)&sha1[7]) &&
+	git_bloom_test(bloom, *(uint32_t*)&sha1[8]) &&
+	git_bloom_test(bloom, *(uint32_t*)&sha1[9]) &&
+	git_bloom_test(bloom, *(uint32_t*)&sha1[10]) &&
+	git_bloom_test(bloom, *(uint32_t*)&sha1[11]) &&
+	git_bloom_test(bloom, *(uint32_t*)&sha1[12]) &&
+	git_bloom_test(bloom, *(uint32_t*)&sha1[13]) &&
+	git_bloom_test(bloom, *(uint32_t*)&sha1[14]) &&
+	git_bloom_test(bloom, *(uint32_t*)&sha1[15]) &&
+	git_bloom_test(bloom, *(uint32_t*)&sha1[16]);
 }
 
 void git_uniq(struct git_bloom *bloom, const char *sha1, const uint32_t *size, uint32_t n, int stride)
