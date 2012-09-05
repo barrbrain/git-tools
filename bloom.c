@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <arpa/inet.h>
 
 struct git_bloom {
@@ -82,32 +83,63 @@ void git_uniq(struct git_bloom *bloom, const char *sha1, const uint32_t *size, u
 	}
 }
 
-const char *open_idx2(FILE *f, uint32_t *objects) {
-	uint32_t hdr[2 + 256];
-	union { uint32_t i; char c[4]; } magic = {.c = {'\377', 't', 'O', 'c'}};
-	rewind(f);
-	if (258 != fread(hdr, 4, 258, f))
-		return NULL;
-	if (hdr[0] != magic.i || ntohl(hdr[1]) != 2)
-		return NULL;
+char *open_idx(FILE *f, uint32_t *r_objects) {
+	const union { uint32_t i; char c[4]; } magic[2] = {{.c = {'\377', 't', 'O', 'c'}}, {.i = htonl(2)}};
+	struct stat st;
+	char *idx = NULL;
+	void *map;
+	uint32_t *hdr;
+	int fd = fileno(f);
 
-	*objects = ntohl(hdr[257]);
-
-	return mmap(NULL, *objects * 28 + sizeof(hdr), PROT_READ, MAP_SHARED, fileno(f), 0);
-}
-
-const char *open_idx1(FILE *f, uint32_t *objects) {
-	uint32_t hdr[256];
-	union { uint32_t i; char c[4]; } magic = {.c = {'\377', 't', 'O', 'c'}};
-	rewind(f);
-	if (256 != fread(hdr, 4, 256, f))
-		return NULL;
-	if (hdr[0] == magic.i && ntohl(hdr[1]) == 2)
+	fstat(fd, &st);
+	if (st.st_size < 256 * 4)
 		return NULL;
 
-	*objects = ntohl(hdr[255]);
+	map = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+	if (map == MAP_FAILED) {
+		perror(NULL);
+		return NULL;
+	}
+	hdr = map;
 
-	return mmap(NULL, *objects * 24 + sizeof(hdr), PROT_READ, MAP_SHARED, fileno(f), 0);
+	if (st.st_size >= 258 * 4 && hdr[0] == magic[0].i && hdr[1] == magic[1].i) {
+		/* idx format v2 */
+		uint32_t objects = ntohl(hdr[257]);
+		if (st.st_size < 258 * 4 + objects * 28)
+			goto done;
+		*r_objects = objects;
+		idx = malloc(objects * 24);
+
+		hdr += 258;
+		memcpy(idx, hdr, 20 * objects);
+		memcpy(idx + 20 * objects, hdr + 6 * objects, 4 * objects);
+	} else {
+		/* idx format v1 */
+		int i;
+		uint32_t *sha, *off;
+
+		uint32_t objects = ntohl(hdr[255]);
+		if (st.st_size < 256 * 4 + objects * 24)
+			goto done;
+		*r_objects = objects;
+		idx = malloc(objects * 24);
+		sha = (uint32_t*)idx;
+		off = sha + 5 * objects;
+
+		hdr += 256;
+		for (i = 0; i < objects; i++) {
+			*sha++ = *hdr++;
+			*sha++ = *hdr++;
+			*sha++ = *hdr++;
+			*sha++ = *hdr++;
+			*sha++ = *hdr++;
+			*off++ = *hdr++;
+		}
+	}
+
+done:
+	munmap(map, st.st_size);
+	return idx;
 }
 
 int cmp32(const void *a, const void *b) {
@@ -120,18 +152,20 @@ int main(int argc, char **argv) {
 	char buf[4096];
 
 	for(fgets(buf, sizeof(buf), stdin); !feof(stdin); fgets(buf, sizeof(buf), stdin)) {
-		const char * map;
+		char * map;
 		uint32_t objects;
 		FILE *f;
 		if (strlen(buf) && buf[strlen(buf) - 1] == '\n')
 			buf[strlen(buf) - 1] = '\0';
 		f = fopen(buf, "r");
 		if (!f) continue;
-		map = open_idx2(f, &objects);
-		if (map && map != MAP_FAILED) {
-			uint32_t *off = (uint32_t *)(map + 258 * 4 + objects * 24);
+		map = open_idx(f, &objects);
+		fclose(f);
+		if (map) {
+			uint32_t *off = (uint32_t *)(map + objects * 20);
+			uint32_t *size = off;
+
 			uint32_t *sorted = malloc(4 * objects + 4);
-			uint32_t *size = malloc(4 * objects);
 			for (i = 0; i < objects; i++)
 				sorted[i] = ntohl(off[i]);
 			qsort(sorted, objects, 4, cmp32);
@@ -143,37 +177,12 @@ int main(int argc, char **argv) {
 					size[i] = v[1] - k;
 				else size[i] = 0;
 			}
-			git_uniq(bloom, map + 258 * 4, size, objects, 20);
-			free(size);
 			free(sorted);
-			munmap((void*)map, objects * 28 + 258 * 4);
-		} else if (map) {
-			perror(NULL);
-		} else if (MAP_FAILED != (map = open_idx1(f, &objects))) {
-			if (map) {
-				uint32_t *off = (uint32_t *)(map + 256 * 4);
-				uint32_t *sorted = malloc(4 * objects + 4);
-				uint32_t *size = malloc(4 * objects);
-				for (i = 0; i < objects; i++)
-					sorted[i] = ntohl(off[i * 6]);
-				qsort(sorted, objects, 4, cmp32);
-				sorted[objects] = sorted[objects - 1];
-				for (i = 0; i < objects; i++) {
-					uint32_t k = ntohl(off[i * 6]);
-					uint32_t *v = ((uint32_t*)bsearch(&k, sorted, objects, 4, cmp32));
-					if (v)
-						size[i] = v[1] - k;
-					else size[i] = 0;
-				}
-				git_uniq(bloom, map + 257 * 4, size, objects, 24);
-				free(size);
-				free(sorted);
-				munmap((void*)map, objects * 24 + 256 * 4);
-			}
-		} else {
-			perror(NULL);
+
+			git_uniq(bloom, map, size, objects, 20);
+
+			free(map);
 		}
-		fclose(f);
 
 		for (i = 0; i < 32; i++) {
 			printf("Unique[%d]: %lld (%d)\n", i, bloom->size[i], bloom->count[i]);
