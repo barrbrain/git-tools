@@ -172,10 +172,12 @@ int main(int argc, char **argv) {
 			sorted[objects] = sorted[objects - 1];
 			for (i = 0; i < objects; i++) {
 				uint32_t k = ntohl(off[i]);
-				uint32_t *v = ((uint32_t*)bsearch(&k, sorted, objects, 4, cmp32));
-				if (v)
-					size[i] = v[1] - k;
-				else size[i] = 0;
+				size[i] = 0;
+				if (!(k & (1 << 31))) {
+					uint32_t *v = ((uint32_t*)bsearch(&k, sorted, objects, 4, cmp32));
+					if (v && !(v[1] & (1 << 31)))
+						size[i] = v[1] - k;
+				}
 			}
 			free(sorted);
 
