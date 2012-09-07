@@ -54,7 +54,6 @@ void git_uniq(struct git_bloom *bloom, const char *sha1, const uint32_t *size, u
 }
 
 char *open_idx(FILE *f, uint32_t *r_objects) {
-	const union { uint32_t i; char c[4]; } magic[2] = {{.c = {'\377', 't', 'O', 'c'}}, {.i = htonl(2)}};
 	struct stat st;
 	char *idx = NULL;
 	void *map;
@@ -72,7 +71,7 @@ char *open_idx(FILE *f, uint32_t *r_objects) {
 	}
 	hdr = map;
 
-	if (st.st_size >= 258 * 4 && hdr[0] == magic[0].i && hdr[1] == magic[1].i) {
+	if (st.st_size >= 258 * 4 && !memcmp("\377tOc\0\0\0\2", map, 8)) {
 		/* idx format v2 */
 		uint32_t objects = ntohl(hdr[257]);
 		if (st.st_size < 258 * 4 + objects * 28)
