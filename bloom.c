@@ -37,7 +37,7 @@ static inline int git_bloom_test_sha1(const struct git_bloom *bloom, const char 
 	return x17(git_bloom_test(bloom, *(uint32_t*)sha1++) &&) 1;
 }
 
-void git_uniq(struct git_bloom *bloom, const char *sha1, const uint32_t *size, uint32_t n, int stride)
+void git_uniq(struct git_bloom *bloom, const char *sha1, const uint32_t *size, uint32_t n)
 {
 	while (n--) {
 		const int il2 = *size ? 31 - __builtin_clz(*size) : 0;
@@ -48,7 +48,7 @@ void git_uniq(struct git_bloom *bloom, const char *sha1, const uint32_t *size, u
 		}
 		bloom->objects[il2]++;
 		bloom->total[il2] += *size;
-		sha1 += stride;
+		sha1 += 20;
 		size++;
 	}
 }
@@ -150,7 +150,7 @@ int main(int argc, char **argv) {
 			}
 			free(sorted);
 
-			git_uniq(bloom, map, size, objects, 20);
+			git_uniq(bloom, map, size, objects);
 
 			free(map);
 		}
