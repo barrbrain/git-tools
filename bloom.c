@@ -53,6 +53,7 @@ void git_uniq(struct git_bloom *bloom, const char *sha1, const uint32_t *size, u
 	}
 }
 
+#define x5(a) x4(a) a
 char *open_idx(FILE *f, uint32_t *r_objects) {
 	struct stat st;
 	char *idx = NULL;
@@ -84,9 +85,7 @@ char *open_idx(FILE *f, uint32_t *r_objects) {
 		memcpy(idx + 20 * objects, hdr + 6 * objects, 4 * objects);
 	} else {
 		/* idx format v1 */
-		int i;
 		uint32_t *sha, *off;
-
 		uint32_t objects = ntohl(hdr[255]);
 		if (st.st_size < 256 * 4 + objects * 24)
 			goto done;
@@ -96,13 +95,9 @@ char *open_idx(FILE *f, uint32_t *r_objects) {
 		off = sha + 5 * objects;
 
 		hdr += 256;
-		for (i = 0; i < objects; i++) {
-			*sha++ = *hdr++;
-			*sha++ = *hdr++;
-			*sha++ = *hdr++;
-			*sha++ = *hdr++;
-			*sha++ = *hdr++;
+		while (objects--) {
 			*off++ = *hdr++;
+			x5(*sha++ = *hdr++;)
 		}
 	}
 
