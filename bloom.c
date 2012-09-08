@@ -13,18 +13,18 @@ static inline int git_bloom_test(const struct git_bloom *bloom, uint32_t bit)
 }
 
 #define x5(a) a a a a a
-#define x6(a) x5(a) a
+#define x11(a) x5(a) x5(a) a
 static inline void git_bloom_set_sha1(struct git_bloom *bloom, const char *sha1)
 {
-	x5(git_bloom_set(bloom, *(uint32_t*)sha1++);)
-	x6(git_bloom_set(bloom, *(uint32_t*)sha1); sha1 += 2;)
+	uint32_t h1 = *(uint32_t*)sha1, h2 = *(uint32_t*)&sha1[4], i = 0;
+	x11(git_bloom_set(bloom, h1 + i++ * h2);)
 }
 
 static inline int git_bloom_test_sha1(const struct git_bloom *bloom, const char *sha1)
 {
+	uint32_t h1 = *(uint32_t*)sha1, h2 = *(uint32_t*)&sha1[4], i = 0;
 	int r = 1;
-	x5(r &= git_bloom_test(bloom, *(uint32_t*)sha1++);)
-	x6(r &= git_bloom_test(bloom, *(uint32_t*)sha1); sha1 += 2;)
+	x11(r &= git_bloom_test(bloom, h1 + i++ * h2);)
 	return r;
 }
 
