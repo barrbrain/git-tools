@@ -2,7 +2,7 @@
 #define _BLOOM_H
 
 struct git_bloom {
-	uint64_t bitfield[1 << (32 - 6)];
+	uint32_t bitfield[1 << (32 - 5)];
 	uint32_t count[32];
 	uint64_t size[32];
 	uint32_t objects[32];

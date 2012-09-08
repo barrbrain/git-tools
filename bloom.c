@@ -6,12 +6,12 @@
 
 static inline void git_bloom_set(struct git_bloom *bloom, uint32_t bit)
 {
-	bloom->bitfield[bit >> 6] |= 1 << (bit & 63);
+	bloom->bitfield[bit >> 5] |= 1 << (bit & 31);
 }
 
 static inline int git_bloom_test(const struct git_bloom *bloom, uint32_t bit)
 {
-	return !!(bloom->bitfield[bit >> 6] & (1 << (bit & 63)));
+	return !!(bloom->bitfield[bit >> 5] & (1 << (bit & 31)));
 }
 
 #define x5(a) a a a a a
