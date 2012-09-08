@@ -9,6 +9,6 @@ struct git_bloom {
 	uint64_t total[32];
 };
 
-void git_uniq(struct git_bloom *bloom, const char *sha1, const uint32_t *size, uint32_t n);
+int git_uniq(struct git_bloom *bloom, const char *sha1, const uint32_t *size, uint32_t n);
 
 #endif

@@ -100,14 +100,10 @@ int main(int argc, char **argv) {
 			}
 			free(sorted);
 
-			git_uniq(bloom, map, size, objects);
+			if (git_uniq(bloom, map, size, objects))
+				printf("%s\n", buf);
 
 			free(map);
-		}
-
-		for (i = 0; i < 32; i++) {
-			printf("Unique[%d]: %lld (%d)\n", i, bloom->size[i], bloom->count[i]);
-			printf("Total[%d]: %lld (%d)\n", i, bloom->total[i], bloom->objects[i]);
 		}
 	}
 
