@@ -24,17 +24,20 @@ static inline int git_bloom_test(const struct git_bloom *bloom, uint32_t bit)
 	return !!(bloom->bitfield[bit >> 6] & (1 << (bit & 63)));
 }
 
-#define x4(a) a a a a
-#define x16(a) x4(x4(a))
-#define x17(a) x16(a) a
+#define x5(a) a a a a a
+#define x6(a) x5(a) a
 static inline void git_bloom_set_sha1(struct git_bloom *bloom, const char *sha1)
 {
-	x17(git_bloom_set(bloom, *(uint32_t*)sha1++);)
+	x5(git_bloom_set(bloom, *(uint32_t*)sha1++);)
+	x6(git_bloom_set(bloom, *(uint32_t*)sha1); sha1 += 2;)
 }
 
 static inline int git_bloom_test_sha1(const struct git_bloom *bloom, const char *sha1)
 {
-	return x17(git_bloom_test(bloom, *(uint32_t*)sha1++) &&) 1;
+	int r = 1;
+	x5(r &= git_bloom_test(bloom, *(uint32_t*)sha1++);)
+	x6(r &= git_bloom_test(bloom, *(uint32_t*)sha1); sha1 += 2;)
+	return r;
 }
 
 void git_uniq(struct git_bloom *bloom, const char *sha1, const uint32_t *size, uint32_t n)
@@ -53,7 +56,6 @@ void git_uniq(struct git_bloom *bloom, const char *sha1, const uint32_t *size, u
 	}
 }
 
-#define x5(a) x4(a) a
 char *open_idx(FILE *f, uint32_t *r_objects) {
 	struct stat st;
 	char *idx = NULL;
