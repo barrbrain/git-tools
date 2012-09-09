@@ -37,10 +37,14 @@ int git_uniq(struct git_bloom *bloom, const char *sha1, const uint32_t *size, ui
 			git_bloom_set_sha1(bloom, sha1);
 			bloom->count[il2]++;
 			bloom->size[il2] += sz;
-		} else if (il2 >= 21) {
+		} else {
 			const uint32_t *h = (const uint32_t *)sha1;
-			printf("%08x%08x%08x%08x%08x\n", ntohl(h[0]), ntohl(h[1]), ntohl(h[2]), ntohl(h[3]), ntohl(h[4]));
-			r = 1;
+			const uint32_t isha1[5] = {~h[0], ~h[1], ~h[2], ~h[3], ~h[4]};
+			if (!git_bloom_test_sha1(bloom, (const char *)isha1)) {
+				git_bloom_set_sha1(bloom, (const char *)isha1);
+				printf("%08x%08x%08x%08x%08x\n", ntohl(h[0]), ntohl(h[1]), ntohl(h[2]), ntohl(h[3]), ntohl(h[4]));
+				r = 1;
+			}
 		}
 		bloom->objects[il2]++;
 		bloom->total[il2] += sz;
