@@ -69,6 +69,8 @@ int main(int argc, char** argv) {
 					printf("%s\n", buf);
 					git_repository_odb(&_odb, _repo);
 					git_odb_foreach(_odb, &foreach_cb, _repo);
+				} else {
+					fprintf(stderr, "failed: %s\n", buf);
 				}
 			}
 			git_oidmap_free(oid_map);
