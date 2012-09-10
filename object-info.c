@@ -35,6 +35,7 @@ static int foreach_cb(git_oid *oid, void *data)
 			
 			git_repository_odb(&odb, repo);
 			git_odb_read_header(&osize, &otype, odb, entry_oid);
+			git_odb_free(odb);
 			git_oid_fmt(ohex, entry_oid);
 			ohex[40] = '\0';
 
@@ -73,10 +74,13 @@ int main(int argc, char** argv) {
 					fprintf(stderr, "failed: %s\n", buf);
 				}
 			}
+			if (_odb) {
+				git_odb_free(_odb);
+				_odb = NULL;
+			}
 			if (_repo) {
 				git_repository_free(_repo);
 				_repo = NULL;
-				_odb = NULL;
 			}
 			if (oid_map) {
 				git_oidmap_free(oid_map);
