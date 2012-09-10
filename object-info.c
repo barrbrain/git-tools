@@ -78,7 +78,10 @@ int main(int argc, char** argv) {
 				_repo = NULL;
 				_odb = NULL;
 			}
-			git_oidmap_free(oid_map);
+			if (oid_map) {
+				git_oidmap_free(oid_map);
+				oid_map = NULL;
+			}
 			oid_map = git_oidmap_alloc();
 			GITERR_CHECK_ALLOC(oid_map);
 			oid_buf_size = 0;
