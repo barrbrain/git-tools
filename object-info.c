@@ -73,6 +73,11 @@ int main(int argc, char** argv) {
 					fprintf(stderr, "failed: %s\n", buf);
 				}
 			}
+			if (_repo) {
+				git_repository_free(_repo);
+				_repo = NULL;
+				_odb = NULL;
+			}
 			git_oidmap_free(oid_map);
 			oid_map = git_oidmap_alloc();
 			GITERR_CHECK_ALLOC(oid_map);
