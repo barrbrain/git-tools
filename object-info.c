@@ -11,6 +11,7 @@ static git_oidmap *oid_map;
 
 static int foreach_cb(git_oid *oid, void *data)
 {
+	int ret = 0;
 	git_repository *repo = (git_repository *)data;
 	git_tree *tree;
 	const git_tree_entry *entry;
@@ -41,11 +42,15 @@ static int foreach_cb(git_oid *oid, void *data)
 
 			printf("%s %s %zu %s\n", ohex, git_object_type2string(otype), osize, oname);
 			kh_del(oid, oid_map, pos);
+			if (!kh_size(oid_map)) {
+				ret = 1;
+				break;
+			}
 		}
 	}	
 	git_tree_free(tree);
 
-        return 0;
+        return ret;
 }
 
 int main(int argc, char** argv) {
@@ -82,23 +87,16 @@ int main(int argc, char** argv) {
 				git_repository_free(_repo);
 				_repo = NULL;
 			}
-			if (oid_map) {
-				git_oidmap_free(oid_map);
-				oid_map = NULL;
-			}
-			oid_map = git_oidmap_alloc();
-			GITERR_CHECK_ALLOC(oid_map);
+			kh_clear(oid, oid_map);
 			oid_buf_size = 0;
 		} else {
 			int ret;
-			int pos;
 			git_oid *oid;
 			if (oid_buf_size == oid_buf_asize)
 				continue;
 			oid = &oid_buf[oid_buf_size++];
 			git_oid_fromstr(oid, buf);
-			pos = kh_put(oid, oid_map, oid, &ret);
-			kh_value(oid_map, pos) = "";
+			kh_put(oid, oid_map, oid, &ret);
 		}
 	}
 	return 0;
