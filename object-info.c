@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
 	git_odb *_odb = NULL;
 	git_repository *_repo = NULL;
 	char buf[4096];
-	const size_t oid_buf_asize = 1 << 24;
+	const size_t oid_buf_asize = 1 << 21;
 	size_t oid_buf_size = 0;
 	git_oid *oid_buf = malloc(oid_buf_asize * sizeof(git_oid));
 	
