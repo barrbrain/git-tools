@@ -8,6 +8,7 @@ DEPS = $(shell PKG_CONFIG_PATH=$(LIBGIT2_PATH)/lib/pkgconfig pkg-config --cflags
 CFLAGS += -g -O3 -I$(LIBGIT2_PATH)/include -I$(LIBGIT2_PATH)/src -L$(LIBGIT2_PATH) -lgit2
 
 OBJECTS = \
+  read-headers.o \
   object-info.o
 
 LIBGIT2_INTERNALS = \
@@ -17,4 +18,5 @@ LIBGIT2_INTERNALS = \
   $(LIBGIT2_PATH)/src/global.c
 
 all: $(OBJECTS)
-	gcc $(CFLAGS) -o object-info $(OBJECTS) $(LIBGIT2_INTERNALS)
+	gcc $(CFLAGS) -o object-info object-info.o $(LIBGIT2_INTERNALS)
+	gcc $(CFLAGS) -o read-headers read-headers.o
